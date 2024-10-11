@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* Loading spinner styles */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <header class="bg-gray-800 p-4 text-white">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-lg font-bold">
+                <a href="/" class="flex items-center space-x-2">
+                    <i class="fas fa-brain text-xl"></i>
+                    <span>AI Image Generator</span>
+                </a>
+            </div>
+            <!-- Mobile menu button -->
+            <button id="mobile-menu-button" class="lg:hidden text-white text-2xl">
+                <i class="fas fa-bars"></i>
+            </button>
+            <!-- Desktop Nav -->
+            <nav class="hidden lg:flex space-x-6">
+                <a href="/" class="hover:text-blue-400">Home</a>
+                <a href="/about" class="hover:text-blue-400">About</a>
+                <a href="/privacy-policy" class="hover:text-blue-400">Privacy Policy</a>
+                <a href="/developer" class="hover:text-blue-400">Developer</a>
+            </nav>
+        </div>
+        <!-- Mobile menu -->
+        <nav id="mobile-menu" class="hidden lg:hidden bg-gray-800 p-4">
+            <a href="/" class="block text-white py-2">Home</a>
+            <a href="/about" class="block text-white py-2">About</a>
+            <a href="/privacy-policy" class="block text-white py-2">Privacy Policy</a>
+            <a href="/developer" class="block text-white py-2">Developer</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-8 flex-grow flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg w-full">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4 text-center">Generate Your Image</h1>
+
+            <!-- Form to input text -->
+            <form id="generate-form" class="mb-6">
+                <textarea id="input-text" placeholder="Enter a detailed description of your image" required
+                    class="w-full h-32 p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <button type="submit" id="submit-btn"
+                    class="w-full bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    Generate Image
+                </button>
+            </form>
+
+            <!-- Loading animation -->
+            <div id="loading" class="flex justify-center mb-4" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+
+            <!-- Time counter -->
+            <div id="time-counter" class="text-center text-gray-600 mb-4" style="display: none;">Time: 0.00 seconds</div>
+
+            <!-- Display Image -->
+            <div id="image-container" class="text-center mb-6" style="display: none;">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Generated Image</h2>
+                <img id="generated-image" src="" alt="Generated Image"
+                    class="mx-auto mb-4 rounded-lg shadow-lg" style="max-width: 100%; height: auto;">
+                <a id="download-link" href="#" download="generated_image.png">
+                    <button
+                        class="bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500">
+                        Download
+                    </button>
+                </a>
+            </div>
+
+            <!-- Error message -->
+            <div id="error-message" class="text-red-500 text-center" style="display: none;">
+                Failed to generate image. Please try again.
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white text-center p-4">
+        <p>© 2024 AI Image Generator. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        const form = document.getElementById("generate-form");
+        const loadingAnimation = document.getElementById("loading");
+        const timeCounter = document.getElementById("time-counter");
+        const imageContainer = document.getElementById("image-container");
+        const generatedImage = document.getElementById("generated-image");
+        const downloadLink = document.getElementById("download-link");
+        const errorMessage = document.getElementById("error-message");
+        const mobileMenuButton = document.getElementById("mobile-menu-button");
+        const mobileMenu = document.getElementById("mobile-menu");
+
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const inputText = document.getElementById("input-text").value;
+
+            // Reset UI elements
+            loadingAnimation.style.display = "block";
+            timeCounter.style.display = "block";
+            imageContainer.style.display = "none";
+            errorMessage.style.display = "none";
+            let elapsedTime = 0;
+            const startTime = Date.now();
+
+            // Start the timer
+            const timerInterval = setInterval(() => {
+                elapsedTime = (Date.now() - startTime) / 1000;
+                timeCounter.innerHTML = `Time: ${elapsedTime.toFixed(2)} seconds`;
+            }, 50);
+
+            try {
+                // Fetch the generated image
+                const response = await fetch("/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: `input_text=${encodeURIComponent(inputText)}`,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Stop timer and update UI
+                    clearInterval(timerInterval);
+                    loadingAnimation.style.display = "none";
+                    timeCounter.style.display = "none";
+
+                    // Display the image and update the download link
+                    generatedImage.src = data.image_path;
+                    downloadLink.href = data.image_path;
+                    imageContainer.style.display = "block";
+                } else {
+                    throw new Error("Image generation failed");
+                }
+            } catch (error) {
+                // Handle errors
+                clearInterval(timerInterval);
+                loadingAnimation.style.display = "none";
+                timeCounter.style.display = "none";
+                errorMessage.style.display = "block";
+                console.error(error);
+            }
+        });
+
+        // Toggle mobile menu
+        mobileMenuButton.addEventListener("click", () => {
+            mobileMenu.classList.toggle("hidden");
+        });
+    </script>
+</body>
+
+</html>
